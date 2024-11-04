@@ -1,0 +1,3079 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Seller API",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "User"
+    },
+    {
+      "name": "Zahtjevi",
+      "description": "- Zahtjevi mogu da imaju sledeće statuse:\n  - NEW (Novi)\n  - CREATED_DELIVERY (Kreiran zahtjev)\n  - CANCELED (Poništen/Storniran)\n  - REJECTED (Odbijen)\n  - PENDING (Na čekanju)\n## Dijagram\n<img src=\"./pp-zahtjevi.png\" />\n"
+    },
+    {
+      "name": "Isporuke",
+      "description": "- Isporuke mogu da imaju sledeće statuse:\n  - PENDING (Čekaju se artikli)\n  - CANCELED (Isporuka oktazana)\n  - CONFIRMED (Artikli potvrđeni)\n  - PARTIALLY_CONFIRMED (Artikli djelimićno potvrđeni)\n  - NOT_CONFIRMED (Artikli nisu potvrđeni)\n  - WAITING_FOR_RECEIPT (Čeka se kreiranje otpremnice)\n  - TRANSPORT_INITIATED (Iniciran transport)\n  - IN_TRANSPORT (Roba na putu)\n  - DELIVERED (Roba isporučena kupcu)\n  - INTERNAL_DOCUMENTATION_CREATED (Kreirana interna dokumentacija)\n  - RETURNED_TO_WAREHOUSE (Roba vraćena u magacin)\n  - REFUSED_TO_RECEIVE (Kupac odbio prijem robe)\n  - CARRIER_RETURNS_SHIPMENT (Prevoznik vraća pošiljku)\n## Dijagram\n<img src=\"./pp-isporuke.png\" />\n"
+    },
+    {
+      "name": "Dokumenti",
+      "description": "- Dokumenti se odnose na fakture\n- Kod dokumentacije razlikujemo <b>tip biznisa</b> i <b>tip dokumenta</b>.\n- <b>Tip biznisa</b> može biti:\n  - WHOLESALE\n  - DROPSHIP\n  - MARKETPLACE\n- <b>Tip dokumenta</b> može biti:\n  - INVOICE\n  - INVOICERETURN\n  - RMAINVOICE\n## Dijagram\n<img src=\"./pp-dokumenti.png\" />\n"
+    },
+    {
+      "name": "Integracija",
+      "description": "API za integraciju sellera sa Seller Portalom",
+      "externalDocs": {
+        "url": "http://portal.platforma.services/api/rest/integration"
+      }
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "User Management",
+      "tags": [
+        "User"
+      ]
+    },
+    {
+      "name": "General",
+      "tags": [
+        "Zahtjevi",
+        "Isporuke",
+        "Dokumenti",
+        "Integracija"
+      ]
+    }
+  ],
+  "paths": {
+    "/login_check": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Prijavljivanje korisnika u sistem",
+        "description": "- Za login korisnika u sistem navode se parametri username (email korisnika) i password.\n- U response-u se dobija JWT token koji se stavlja u Authorization header budućih request-a <b>Authorization: Bearer &lt;token&gt; </b>\n- JWT token je aktivan 60 min.\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Login"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid credentials"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-requests/list/{page}": {
+      "post": {
+        "summary": "Izlistavanje zahtjeva",
+        "description": "- Dobija se lista zahtjeva. Zahtjev sadrži jednu ili više porudžbinu(<b>item-a</b>)\n- Zahtjevi se izlistavaju po <b>vendoru</b> i po <b>sajt id-u</b>. Da bi se zahtjevi izlistali,\n  potrebno je da korisnik (user) ima definisan vendor.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Zahtjevi"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "description": "Trenutni broj stranice liste zahtjeva",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deliveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deliveryRequestSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "No seller is defined for the user"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-requests/accept": {
+      "post": {
+        "summary": "Api za setovanje količina za određeni zahtjev",
+        "description": "- Na ovaj endpoint se šalju \"requestId\"(id zahtjeva), \"items\" objekat koji u sebi sadrzi \"itemId\"(označava id porudžbine)\ni \"warehouses\" objekat koji u sebi sadrži id magacina i zahtjevanu količinu.\n- Nakon određenih provjera sa strane api-ja (da li zahtjev postoji, da li magacin postoji, da li u naznačenom item-u(narudžbini) postoji dovoljno predviđene količine), naznačenom zahtjevu se setuje status PENDING i u odgovoru se dobija <b>status: success</b>.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Zahtjevi"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deliveryRequestAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Delivery Request [ID - 12] does not exist."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-requests/reject": {
+      "post": {
+        "summary": "Api za setovanje statusa da je zahtjev odbijen",
+        "description": "- Za navedeni id zahtjeva se setuje status da je zahtjev odbijen(REJECTED).\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Zahtjevi"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deliveryRequestId"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, request with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-requests/warehouses": {
+      "get": {
+        "summary": "Izlistavanje magacina",
+        "description": "- Api vraća listu magacina koja se koristi da se izabere iz kojih magacina se odgovara na zahtjevane proizvode\n(na endpointu [`POST /delivery-requests/accept`](#tag/Zahtjevi/paths/~1delivery-requests~1accept/post)).\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Zahtjevi"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/getWarehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User {1} has no rights to the warehouse."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/list/{page}": {
+      "post": {
+        "summary": "Izlistavanje isporuka",
+        "description": "- Dobija se lista isporuka. Isporuka se sadrži jednu ili više porudžbinu(<b>item-a</b>)\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Isporuke"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "description": "Trenutni broj stranice liste isporuka",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/delivery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deliverySuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "User {1} has no rights to the warehouse."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/submit-answer": {
+      "post": {
+        "summary": "Api za potvrdu količina isporuka",
+        "description": "- Endpoint prima id isporuke i parametar items(objekat) koji u sebi sadrži id item-a isporuke i količinu item-a isporuke.<br>\n<i>Napomena: Isporuka može da ima jedan ili više item.</i>\n- Na strani api-ja se setuje status isporuke u NOT_CONFIRMED, PARTIALLY_CONFIRMED ili CONFIRMED\n(u zavisnosti od toga da li postoji dovoljan broj količina za određeni zahtjev), i taj status se vraća u responsu.\n- Na strani api-ja se invoice status u isporuci setuje na REQUIRED_DOCUMENTATION, što znači da korisnik treba da kreira fakturu.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Isporuke"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/confirmedQuantities"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "PARTIALLY_CONFIRMED"
+                    },
+                    "invoiceStatus": {
+                      "type": "string",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, delivery with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/submit-packed": {
+      "post": {
+        "summary": "Potvrda da je roba spakovana",
+        "description": "- Api prima informaciju da je roba spakovana za određenu isporuku.\n- Sa strane api-ja se za navedeni id isporuke setuje status Čeka se kreiranje otpremnice(WAITING_FOR_RECEIPT).\n  Takođe se setuje i invoice status na REQUIRED_DOCUMENTATION.\n- Ovaj Api treba pozivati kada je status isporuke CONFIRMED ili PARTIALLY_CONFIRMED.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Isporuke"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "deliveryID",
+                  "packagesAmount"
+                ],
+                "properties": {
+                  "deliveryID": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "packagesAmount": {
+                    "type": "integer",
+                    "example": 3
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "WAITING_FOR_RECEIPT"
+                    },
+                    "invoiceStatus": {
+                      "type": "string",
+                      "example": "WAITING_FOR_DOCUMENTATION"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, delivery with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/return-delivery-to-warehouse": {
+      "post": {
+        "summary": "Potvrda da je roba vraćena u magacin",
+        "description": "- Za navedeni id isporuke se setuje status da je isporuka vraćena u magacin(RETURNED_TO_WAREHOUSE).\n- Ovaj Api treba pozivati kada je status isporuke CARRIER_RETURNS_SHIPMENT.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Isporuke"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deliveryId"
+              }
+            }
+          },
+          "description": "Example JSON"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "RETURNED_TO_WAREHOUSE"
+                    },
+                    "invoiceStatus": {
+                      "type": "string",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, delivery with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-document/list": {
+      "post": {
+        "summary": "Izlistavanje dokumenata(faktura)",
+        "description": "- Endpoint vraća listu dokumenata.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Dokumenti"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deliveryDocument"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deliveryDocumentSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, delivery with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-document/file-upload/{deliveryNumber}": {
+      "post": {
+        "summary": "Otpremanje dokumenta(fakture)",
+        "description": "- Endpoint se koristi za upload dokumenta.\n- Korisnik(user) može samo za svoje isporuke da otprema dokument. Provjera se vrši preko deliveryNumber-a.\n- Api treba pozivati kada je invoiceStatus = REQUIRED_DOCUMENTATION\n- U response-u se dobija document_hash koji se kasnije može koristiti na endpointu\n[`GET /delivery-document/file-preview/{docHash}`](#tag/Dokumenti/paths/~1delivery-document~1file-preview~1{docHash}/get) za preview dokumenta.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Dokumenti"
+        ],
+        "parameters": [
+          {
+            "name": "deliveryNumber",
+            "in": "path",
+            "description": "Broj isporuke",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "Fajl za otpremanje",
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "sellerId": {
+                    "description": "Id selera (koristi se samo za odredjene role)",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "example": "618915bd019bf",
+                      "description": "Hash dokumenta"
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Niste ovlašćeni da kreirate fakturu za naznačenu isporuku"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-document/create": {
+      "post": {
+        "summary": "Kreiranje novog dokumenta(fakture)",
+        "description": "- Kreiranje novog, ili update postojećeg dokumenta (api radi provjeru na osnovu: DeliveryNumber, SellerId,\nBusinessModel,DocumentType)\n- Sa strane api-ja se setuje novi status za definisanu isporuku InvoiceStatus = CREATED_DOCUMENTATION\n- Ovaj api treba da se poziva kada je invoiceStatus = REQUIRED_DOCUMENTATION.\nNajprije treba odraditi upload dokumenta na endpointu [`POST /delivery-document/file-upload/{deliveryNumber}`](#tag/Dokumenti/paths/~1delivery-document~1file-upload~1{deliveryNumber}/post),\na zatim pozvati ovaj api.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Dokumenti"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryDocument"
+              }
+            }
+          },
+          "description": "- <b>businessModel</b> može biti:\n  - \"WHOLESALE\"\n  - \"DROPSHIP\"\n  - \"MARKETPLACE\".\n- <b>documentType</b> može biti:\n  - \"INVOICE\"\n  - 'INVOICERETURN'\n  - 'RMAINVOICE'\n",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Error, delivery with this id does not exist!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-document/file-preview/{docHash}": {
+      "get": {
+        "summary": "Pregled dokumenta",
+        "description": "- Endpoint prima `docHash` (documentHash) i prikazuje dokument.\n",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "Dokumenti"
+        ],
+        "parameters": [
+          {
+            "name": "docHash",
+            "in": "path",
+            "description": "Hash dokumenta",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Expired JWT Token."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integration/product-info/{siteId}/{sku}": {
+      "get": {
+        "tags": [
+          "Integracija"
+        ],
+        "summary": "Podaci artikla po Sajtu i SKU",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "operationId": "ProductInfo",
+        "description": "Vraća podatke artikla",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Unique site name",
+            "schema": {
+              "type": "string",
+              "example": "eplaneta_srbija"
+            }
+          },
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "description": "Unique product identifier",
+            "schema": {
+              "type": "string",
+              "example": "ABC-123"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Podaci artikla",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductInfoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotAuthorizedResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integration/update-products/{siteId}": {
+      "post": {
+        "tags": [
+          "Integracija"
+        ],
+        "summary": "Ažuriranje ili kreiranje novih artikala",
+        "description": "Ažuriranje ili kreiranje novih artikala",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Unique site name",
+            "schema": {
+              "type": "string",
+              "example": "eplaneta_srbija"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPayloadArray"
+              }
+            }
+          },
+          "description": "Product payload(s)",
+          "required": true
+        },
+        "operationId": "UpdateProducts",
+        "responses": {
+          "200": {
+            "description": "Update products response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateProductsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotAuthorizedResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integration/update-products/stock-price/{siteId}": {
+      "post": {
+        "tags": [
+          "Integracija"
+        ],
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Unique site name",
+            "schema": {
+              "type": "string",
+              "example": "eplaneta_srbija"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPriceStockPayloadArray"
+              }
+            }
+          },
+          "description": "Product payload(s)",
+          "required": true
+        },
+        "summary": "Ažuriranje cijena i količina artikala",
+        "operationId": "UpdateProductsPriceStock",
+        "description": "Ažuriranje cijena i količina artikala",
+        "responses": {
+          "200": {
+            "description": "Update products response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateProductsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotAuthorizedResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integration/get-categories/{sellerId}/{siteId}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "sellerId",
+            "in": "path",
+            "required": true,
+            "description": "Unique seller identifier",
+            "schema": {
+              "type": "string",
+              "example": 52
+            }
+          },
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Unique site name",
+            "schema": {
+              "type": "string",
+              "example": "eplaneta_srbija"
+            }
+          }
+        ],
+        "tags": [
+          "Integracija"
+        ],
+        "summary": "Lista kategorija po Selleru i Sajtu",
+        "operationId": "CategoriesBySellerSite",
+        "description": "Vraća listu kategorija po Selleru i Sajtu",
+        "responses": {
+          "200": {
+            "description": "Update products response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotAuthorizedResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integration/diff/reduce-stock/{siteId}/{timestamp}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "description": "Unique site name",
+            "schema": {
+              "type": "string",
+              "example": "eplaneta_srbija"
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "path",
+            "required": true,
+            "description": "Timstamp as starting date time",
+            "schema": {
+              "type": "string",
+              "example": 1639481651
+            }
+          }
+        ],
+        "tags": [
+          "Integracija"
+        ],
+        "summary": "Kreiranje integration post process-a",
+        "operationId": "AddIntegrationPostProcess",
+        "description": "- Integration post proces je entity koji se kreira slanje site ID-a i početnog datuma (timestamp-a)\n- Kreirani entity se poslije obrađuje preko komande koja se okida conr job-om\n- Aktivni post process entity se obrađuje tako što se uzme početni timestamp koji je upisan, a zatim se učitavaju integracijski Price&Stock queue item-i po selleru, sajtu i početnom timestamp-u\n- U kalkulaciju ulaze svi queue item-i koji su poslani nakon poslanog timestamp-a\n- Obrada se radi na način da se učitavaju stockovi artikala sa queue item-a koji su ušli u kalkulaciju\n- Učitani stockovi se onda vrte i sve količine se nuliraju (spuštaju na 0)\n",
+        "responses": {
+          "200": {
+            "description": "Update products response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationPostProcessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotAuthorizedResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8081/rest"
+    },
+    {
+      "url": "https://localhost:8081/rest"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      }
+    },
+    "schemas": {
+      "delivery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "example": 10,
+            "description": "Broj isporuka po stranici"
+          },
+          "status": {
+            "type": "string",
+            "example": "CONFIRMED",
+            "description": "Filtriranje isporuka po statusu"
+          },
+          "fromDate": {
+            "type": "string",
+            "example": "2021-03-15 12:38:23",
+            "description": "Filtriranje isporuke od navedenog datuma"
+          },
+          "toDate": {
+            "type": "string",
+            "example": "2021-03-15 12:38:23",
+            "description": "Filtriranje isporuke do navedenog datuma"
+          },
+          "siteID": {
+            "type": "integer",
+            "example": 1,
+            "description": "Filtriranje isporuke po sajt id-u"
+          },
+          "deliveryNumber": {
+            "type": "string",
+            "example": "11589111-2020",
+            "description": "Filtriranje isporuke po broju isporuke ili po sku"
+          },
+          "deliveriesIds": {
+            "type": "integer",
+            "example": 1123,
+            "description": "Parametar koji se koristi na Portalu zbog refresh stranice"
+          },
+          "deliveryRequestId": {
+            "type": "integer",
+            "example": 2,
+            "description": "Filtriranje isporuke po id zahtjeva"
+          },
+          "deliveryRequestNumber": {
+            "type": "string",
+            "description": "Filtriranje isporuke po broju zahtjeva"
+          }
+        }
+      },
+      "deliveryId": {
+        "type": "object",
+        "required": [
+          "deliveryID"
+        ],
+        "properties": {
+          "deliveryID": {
+            "type": "integer",
+            "example": 1,
+            "description": "Id isporuke"
+          }
+        }
+      },
+      "confirmedQuantities": {
+        "type": "object",
+        "required": [
+          "deliveryID",
+          "items"
+        ],
+        "properties": {
+          "deliveryID": {
+            "type": "integer",
+            "example": 1,
+            "description": "Id isporuke"
+          },
+          "items": {
+            "type": "object",
+            "description": "Može biti više objekata sa id itema i traženom količinom.",
+            "required": [
+              "idItem"
+            ],
+            "properties": {
+              "1": {
+                "type": "number",
+                "description": "1 oznacava id item-a isporuke, broj 5 je kolicina item-a isporuke",
+                "example": 5
+              },
+              "2": {
+                "type": "number",
+                "description": "2 oznacava id item-a isporuke, broj 3 je kolicina item-a isporuke",
+                "example": 3
+              }
+            }
+          }
+        }
+      },
+      "deliverySuccess": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "deliveryNumber": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "packingTime": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "deliveryNote": {
+                  "type": "string"
+                },
+                "documentation": {
+                  "type": "string"
+                },
+                "siteId": {
+                  "type": "integer"
+                },
+                "timeoutExpiredConfirmed": {
+                  "type": "boolean"
+                },
+                "invoiceStatus": {
+                  "type": "string"
+                },
+                "packagesAmount": {
+                  "type": "integer"
+                },
+                "warehouse": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "globalWarehouse": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "workingHoursMondayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursMondayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursTuesdayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursTuesdayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursWednesdayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursWednesdayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursThursdayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursThursdayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursFridayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursFridayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursSaturdayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursSaturdayTo": {
+                      "type": "string"
+                    },
+                    "workingHoursSundayFrom": {
+                      "type": "string"
+                    },
+                    "workingHoursSundayTo": {
+                      "type": "string"
+                    },
+                    "responseHours": {
+                      "type": "object",
+                      "properties": {
+                        "friday": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "from": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "monday": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "from": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "sunday": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "from": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "tuesday": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "saturday": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "thursday": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "wednesday": {
+                          "type": "array",
+                          "items": {}
+                        }
+                      }
+                    },
+                    "street": {
+                      "type": "string"
+                    },
+                    "streetNumber": {
+                      "type": "string"
+                    },
+                    "postcode": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "type": "string"
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "contactPerson": {
+                      "type": "string"
+                    },
+                    "contactPhone": {
+                      "type": "string"
+                    },
+                    "sellerWarehouseIdentifier": {
+                      "type": "object",
+                      "properties": {
+                        "31": {
+                          "type": "string",
+                          "example": "vp102@platforma.biz",
+                          "description": "31 indicates the seller's id"
+                        }
+                      }
+                    }
+                  }
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "deliveryWarehouseName": {
+                  "type": "string"
+                },
+                "deliveryPaymentMethod": {
+                  "type": "string"
+                },
+                "deliveryRequestID": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "deliveryItem": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "ean": {
+                        "type": "string"
+                      },
+                      "variation": {
+                        "type": "string"
+                      },
+                      "variationValue": {
+                        "type": "string"
+                      },
+                      "quantityOrder": {
+                        "type": "integer"
+                      },
+                      "quntityProvided": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "sellerId": {
+                        "type": "integer"
+                      },
+                      "vatRate": {
+                        "type": "number"
+                      },
+                      "sellerPrice": {
+                        "type": "number"
+                      },
+                      "commission": {
+                        "type": "number"
+                      },
+                      "sellerBusinessModelType": {
+                        "type": "string"
+                      },
+                      "rmaQuantity": {
+                        "type": "number"
+                      },
+                      "product": {
+                        "type": "object"
+                      },
+                      "sellerName": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "invoice": {
+                  "type": "object",
+                  "properties": {
+                    "retail": {
+                      "type": "object",
+                      "description": "instead of retail it can be dropship",
+                      "properties": {
+                        "group": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "vatBase": {
+                                "type": "number"
+                              },
+                              "vat": {
+                                "type": "number"
+                              },
+                              "payment": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "sku": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "price": {
+                                "type": "number"
+                              },
+                              "vatRate": {
+                                "type": "number"
+                              },
+                              "commission": {
+                                "type": "number"
+                              },
+                              "vat": {
+                                "type": "number"
+                              },
+                              "vatExcluded": {
+                                "type": "number"
+                              },
+                              "totalWithVat": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "supplier": {
+                          "type": "object",
+                          "properties": {
+                            "tin": {
+                              "type": "number"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "companyNumber": {
+                              "type": "number"
+                            },
+                            "country": {
+                              "type": "string"
+                            },
+                            "city": {
+                              "type": "string"
+                            },
+                            "zipcode": {
+                              "type": "number"
+                            },
+                            "address": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "currentAccount": {
+                              "type": "number"
+                            },
+                            "phoneNumber": {
+                              "type": "string"
+                            },
+                            "contactPerson": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "buyer": {
+                          "type": "object",
+                          "properties": {
+                            "tin": {
+                              "type": "number"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "companyNumber": {
+                              "type": "number"
+                            },
+                            "country": {
+                              "type": "string"
+                            },
+                            "city": {
+                              "type": "string"
+                            },
+                            "zipcode": {
+                              "type": "number"
+                            },
+                            "address": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "currentAccount": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "date": {
+                          "type": "object",
+                          "properties": {
+                            "date": {
+                              "type": "string"
+                            },
+                            "timezone_type": {
+                              "type": "number"
+                            },
+                            "timezone": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "total": {
+                          "type": "object",
+                          "properties": {
+                            "totalVatExcluded": {
+                              "type": "number"
+                            },
+                            "totalDiscount": {
+                              "type": "number"
+                            },
+                            "totalVatBase": {
+                              "type": "number"
+                            },
+                            "totalVat": {
+                              "type": "number"
+                            },
+                            "payment": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPage": {
+            "type": "integer"
+          },
+          "totalDeliveries": {
+            "type": "integer"
+          },
+          "paginationData": {
+            "type": "object",
+            "properties": {
+              "from_page": {
+                "type": "integer"
+              },
+              "to_pages": {
+                "type": "integer"
+              },
+              "pages": {
+                "type": "integer"
+              },
+              "current_page": {
+                "type": "integer"
+              },
+              "block_size": {
+                "type": "integer"
+              },
+              "current_block": {
+                "type": "integer"
+              },
+              "max_blocks": {
+                "type": "integer"
+              },
+              "params": {
+                "type": "string"
+              },
+              "params_th": {
+                "type": "string"
+              },
+              "total": {
+                "type": "integer"
+              }
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "deliveryRequest": {
+        "type": "object",
+        "properties": {
+          "siteID": {
+            "type": "integer",
+            "example": 2,
+            "description": "Filtriranje zahtjeva po sajt id"
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10,
+            "description": "Broj zahtjeva po stranici"
+          },
+          "status": {
+            "type": "string",
+            "example": "NEW",
+            "description": "Filtriranje zahtjeva po statusu"
+          },
+          "fromDate": {
+            "type": "string",
+            "example": "2021-03-15 12:38:23",
+            "description": "Filtriranje zahtjeva od navedenog datuma"
+          },
+          "toDate": {
+            "type": "string",
+            "example": "2021-03-15 12:38:23",
+            "description": "Filtriranje zahtjeva do navedenog datuma"
+          },
+          "requestId": {
+            "type": "integer",
+            "example": 1,
+            "description": "Filtriranje zahtjeva po id-u zahtjeva"
+          },
+          "requestsIds": {
+            "type": "integer",
+            "example": 1,
+            "description": "Parametar koji se koristi na Portalu zbog refresh stranice"
+          }
+        }
+      },
+      "deliveryRequestId": {
+        "type": "object",
+        "required": [
+          "requestId"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "integer",
+            "example": 1,
+            "description": "Id zahtjeva"
+          }
+        }
+      },
+      "deliveryRequestSuccess": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "status": {
+                  "type": "string",
+                  "example": "NEW"
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "deliveryRequestNumber": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "sellerId": {
+                  "type": "integer"
+                },
+                "delivery": {
+                  "type": "array",
+                  "example": [
+                    1,
+                    2
+                  ],
+                  "items": {}
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 10
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "ean": {
+                        "type": "string",
+                        "example": "2021-04-26T12:31:41+00:00"
+                      },
+                      "variation": {
+                        "type": "string"
+                      },
+                      "variationValue": {
+                        "type": "string"
+                      },
+                      "quantityOrder": {
+                        "type": "integer"
+                      },
+                      "quantityProvided": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "sellerPrice": {
+                        "type": "number"
+                      },
+                      "vatRate": {
+                        "type": "number"
+                      },
+                      "commission": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "currentPage": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalPage": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalRequests": {
+            "type": "string"
+          },
+          "status": {
+            "example": "success"
+          }
+        }
+      },
+      "deliveryRequestAccept": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "items"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "integer",
+            "description": "Id zahtjeva",
+            "example": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "itemId",
+                "warehouses"
+              ],
+              "properties": {
+                "itemId": {
+                  "type": "integer",
+                  "description": "id item-a(narudžbine)",
+                  "example": 1
+                },
+                "warehouses": {
+                  "type": "object",
+                  "description": "Može biti više objekata sa id magacina i traženom količinom.",
+                  "required": [
+                    "1",
+                    "2"
+                  ],
+                  "properties": {
+                    "1": {
+                      "type": "string",
+                      "example": 5,
+                      "description": "1 je id magacina.Broj 5 predstavlja traženu kolicinu."
+                    },
+                    "2": {
+                      "type": "string",
+                      "example": 3,
+                      "description": "2 je id magacina.Broj 3 predstavlja traženu kolicinu."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "getWarehouse": {
+        "type": "object",
+        "properties": {
+          "warehouses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "name": {
+                  "type": "string",
+                  "example": "ARANDJELOVAC-001"
+                },
+                "street": {
+                  "type": "integer",
+                  "example": "ul. Test"
+                },
+                "city": {
+                  "type": "string",
+                  "example": "Beograd"
+                }
+              }
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "deliveryDocument": {
+        "type": "object",
+        "properties": {
+          "Limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "Page": {
+            "type": "integer",
+            "example": 1,
+            "description": "Trenutni broj stranice liste dokumenata"
+          },
+          "FromDate": {
+            "type": "string",
+            "description": "Filtriranje dokumenata od datuma kreiranja"
+          },
+          "ToDate": {
+            "type": "string",
+            "description": "Filtriranje dokumenata do datuma kreiranja"
+          },
+          "DeliveryId": {
+            "type": "integer",
+            "description": "Filtriranje dokumenata po id isporuke"
+          },
+          "DeliveryNumber": {
+            "type": "string",
+            "description": "Filtriranje dokumenata po broju isporuke"
+          },
+          "DocumentNumber": {
+            "type": "string",
+            "description": "Filtriranje dokumenata po broju dokumenta"
+          },
+          "BusinessModel": {
+            "type": "integer",
+            "example": 2,
+            "description": "Filtriranje dokumenata po biznis tipu. Biznis tipovi mogu biti WHOLESALE(1),DROPSHIP(2),MARKETPLACE(3). Može se filtrirati i stringom, npr WHOLESALE"
+          },
+          "SellerId": {
+            "type": "integer",
+            "description": "Filtriranje dokumenata po vendoru. Filter se upotrebljava samo za odredjene role."
+          }
+        }
+      },
+      "DeliveryDocument": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "BusinessModel",
+            "DocumentNumber",
+            "DocumentType",
+            "DeliveryNumber"
+          ],
+          "properties": {
+            "BusinessModel": {
+              "type": "string",
+              "example": "WHOLESALE",
+              "description": "Biznis model može biti WHOLESALE,DROPSHIP,MARKETPLACE"
+            },
+            "DocumentNumber": {
+              "type": "string"
+            },
+            "FileHash": {
+              "type": "string",
+              "example": "6184fb6db9534"
+            },
+            "InvoicePath": {
+              "type": "string",
+              "description": "putanja do fakture"
+            },
+            "DocumentType": {
+              "type": "string",
+              "example": "INVOICE",
+              "description": "Biznis model može biti INVOICE,INVOICERETURN,RMAINVOICE"
+            },
+            "DeliveryNumber": {
+              "type": "string",
+              "example": "000002216-3",
+              "description": "broj isporuke, na osnovu koje se nađe isporuka i sačuva njen id u Dokumentu"
+            },
+            "SellerId": {
+              "type": "integer",
+              "description": "Obavezno samo za odredjene role."
+            },
+            "Items": {
+              "type": "array",
+              "description": "Items se koristi samo ukoliko je DocumentType = RMAINVOICE",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "DeliveryItemID": {
+                    "type": "integer"
+                  },
+                  "Quantity": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "deliveryDocumentSuccess": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 10
+                },
+                "documentNumber": {
+                  "type": "string",
+                  "example": "1"
+                },
+                "documentType": {
+                  "type": "string",
+                  "example": "INVOICE"
+                },
+                "businessModelType": {
+                  "type": "string",
+                  "example": "WHOLESALE"
+                },
+                "createdDate": {
+                  "type": "string",
+                  "example": "2021-04-21T00:00:00+00:00"
+                },
+                "amount": {
+                  "type": "string",
+                  "example": "8754.00"
+                },
+                "documentHash": {
+                  "type": "string",
+                  "example": "xxxx"
+                },
+                "vendorId": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "invoicePath": {
+                  "type": "string"
+                },
+                "sellerId": {
+                  "type": "integer"
+                },
+                "VatAmount": {
+                  "type": "number"
+                },
+                "netPrice": {
+                  "type": "number"
+                },
+                "deliveryId": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "currentPage": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalPage": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalDocuments": {
+            "type": "integer"
+          },
+          "paginationData": {
+            "type": "array",
+            "items": {}
+          },
+          "status": {
+            "example": "success"
+          }
+        }
+      },
+      "deliveryID": {
+        "type": "object",
+        "required": [
+          "ID"
+        ],
+        "properties": {
+          "ID": {
+            "type": "integer",
+            "example": 1,
+            "description": "Id isporuke"
+          }
+        }
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE2MzY3MTQ1OTQsImV4cCI6MTYzNjcxODE5NCwiZW1haWwiOiJzZWxsZXJhZG1pbkBiaWxkLXN0dWRpby5uZXQiLCJ1c2VyX2lkIjoxMn0.mNXFaRCaQJXuMjhwlLECMR8Jy45npF5ZsyK5hVWblf-XXWCdvXKlbGHeAvTEH-rL5ruaa2zqKl6YbWwiH8Z21C3kKZ98xu-ZXo32r5jJD59GgyLY7-qmXt76k74WJAsJ31kj18Uo4B26vTrNTvhDgnalRZN1dmFq_ndKq5Z1cjLXncS3nK3356voJDhYw69gYweBrrZzyoFKCKy3jVUHGttlJXZFlbAU4xRz1VA7FXz9g9VloTOWNCzGJnDB0QYiUwYXbu_Qh1Zd23lMEHpJCwwaAVJtXSGtylQ4CbsjBCfUQX2qh38R3O64e6r7M_pIT1MnpscO5-aw4AhA_uLdvg"
+          },
+          "refresh_token": {
+            "type": "string",
+            "example": "54ba09b8eaa1a0ca8d8e110990112ca65d1518bb8c0c03389f79b1101d6d8a6dca1fb1a17dda04b768d2de2ed7deb33417e1c0ac97fc41ae11d540c997e86ab2"
+          }
+        }
+      },
+      "LoginUser": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "ABC-123"
+          },
+          "ean": {
+            "type": "string",
+            "example": "215484218574541"
+          },
+          "type": {
+            "type": "string",
+            "example": "configurable"
+          },
+          "name": {
+            "type": "string",
+            "example": "Patike Nike Air Max Commander"
+          },
+          "gender": {
+            "type": "string",
+            "example": "male"
+          },
+          "variation_type": {
+            "type": "string",
+            "example": "size"
+          },
+          "product_type": {
+            "type": "string",
+            "example": "configurable"
+          },
+          "retail_price": {
+            "type": "number",
+            "example": 11256.33
+          },
+          "special_price": {
+            "type": "number",
+            "example": 10256.33
+          },
+          "net_purchase_price": {
+            "type": "number",
+            "example": 5699.66
+          },
+          "recommended_retail_price": {
+            "type": "number",
+            "example": 11256.33
+          },
+          "commission": {
+            "type": "number",
+            "example": 10
+          },
+          "model": {
+            "type": "string",
+            "example": "wholesale"
+          },
+          "description": {
+            "type": "string",
+            "example": "Nike patike..."
+          },
+          "attribute_set": {
+            "type": "string",
+            "example": "Patike"
+          },
+          "brand": {
+            "type": "string",
+            "example": "Nike"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Patike"
+                }
+              }
+            }
+          },
+          "inventory": {
+            "type": "object",
+            "properties": {
+              "41": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "warehouse": {
+                      "type": "string",
+                      "example": "Logistar - Beograd"
+                    },
+                    "qty": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 50
+                    }
+                  }
+                }
+              },
+              "42": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "warehouse": {
+                      "type": "string",
+                      "example": "Logistar - Beograd"
+                    },
+                    "qty": {
+                      "type": "integer",
+                      "format": "int32",
+                      "example": 25
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductPayloadArray": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ProductPayload"
+        }
+      },
+      "ProductPayload": {
+        "type": "object",
+        "properties": {
+          "POL": {
+            "type": "string",
+            "example": "Žene"
+          },
+          "SKU": {
+            "type": "string",
+            "example": "ABC-123"
+          },
+          "TYPE": {
+            "type": "string",
+            "example": "configurable"
+          },
+          "PRICE": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1256.33
+          },
+          "ACTIVE": {
+            "type": "boolean",
+            "example": "false"
+          },
+          "STOCK": {
+            "type": "object",
+            "properties": {
+              "L": {
+                "type": "object",
+                "properties": {
+                  "Dusanovac VP  REMIKS": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 34
+                  },
+                  "Logistar - Platforma": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 26
+                  },
+                  "Remiks 01-Beograd TC Rajićeva": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 55
+                  }
+                }
+              },
+              "M": {
+                "type": "object",
+                "properties": {
+                  "Dusanovac VP  REMIKS": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 56
+                  },
+                  "Logistar - Platforma": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 77
+                  },
+                  "Remiks 01-Beograd TC Rajićeva": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 66
+                  }
+                }
+              }
+            }
+          },
+          "ATTRIBUTE_SET": {
+            "type": "string",
+            "example": "BLEJZERI"
+          },
+          "KATEGORIJA": {
+            "type": "string",
+            "example": "ZENE -> BLEJZERI"
+          },
+          "VARIATION": {
+            "type": "string",
+            "example": "SIZE"
+          },
+          "VARIATIONS": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "M"
+            }
+          },
+          "DISABLED_VARIATIONS": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "L"
+            }
+          },
+          "PACKAGE_NUMBERS": {
+            "type": "object",
+            "properties": {
+              "L": {
+                "type": "string",
+                "example": "2"
+              },
+              "M": {
+                "type": "string",
+                "example": "3"
+              },
+              "S": {
+                "type": "string",
+                "example": "5"
+              }
+            }
+          },
+          "MIN_QUANTITIES": {
+            "type": "object",
+            "properties": {
+              "L": {
+                "type": "string",
+                "example": "5"
+              },
+              "M": {
+                "type": "string",
+                "example": "6"
+              },
+              "S": {
+                "type": "string",
+                "example": "12"
+              }
+            }
+          },
+          "EAN_VARIATION": {
+            "type": "object",
+            "properties": {
+              "L": {
+                "type": "string",
+                "example": "215216542154"
+              },
+              "M": {
+                "type": "string",
+                "example": "311545218425"
+              },
+              "S": {
+                "type": "string",
+                "example": "598321265215"
+              }
+            }
+          },
+          "SPECIAL_PRICE": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1156.66
+          },
+          "SPECIAL_PRICE_START_DATE": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|10 June 2022"
+          },
+          "SPECIAL_PRICE_END_DATE": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|10 June 2022"
+          },
+          "NET_PURCHASE_PRICE": {
+            "type": "number",
+            "example": 556.99
+          },
+          "SECOND_NET_PURCHASE_PRICE": {
+            "type": "number",
+            "example": 132.22
+          },
+          "SECOND_NET_PURCHASE_PRICE_FROM": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|10 June 2022"
+          },
+          "SECOND_NET_PURCHASE_PRICE_TO": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|10 June 2022"
+          },
+          "SECOND_RETAIL_PRICE": {
+            "type": "number",
+            "example": 1523.77
+          },
+          "SECOND_RETAIL_PRICE_FROM": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|10 June 2022"
+          },
+          "SECOND_RETAIL_PRICE_TO": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|10 June 2022"
+          },
+          "RECOMMENDED_RETAIL_PRICE": {
+            "type": "number",
+            "example": 1563.99
+          },
+          "PURCHASE_PRICE": {
+            "type": "number",
+            "example": 556.99
+          }
+        }
+      },
+      "UpdateProductsResponseObject": {
+        "type": "object",
+        "properties": {
+          "recieved_product_number": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2
+          },
+          "new_queue_items": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2
+          },
+          "errors_number": {
+            "type": "integer",
+            "format": "int32",
+            "example": 10
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ABC-123": {
+                  "type": "string",
+                  "example": "Payload is missing SKU"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductPriceStockPayloadArray": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ProductPriceStockPayload"
+        }
+      },
+      "ProductPriceStockPayload": {
+        "type": "object",
+        "properties": {
+          "SKU": {
+            "type": "string",
+            "example": "ABC-123"
+          },
+          "TYPE": {
+            "type": "string",
+            "example": "configurable"
+          },
+          "PRICE": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1256.33
+          },
+          "STOCK": {
+            "type": "object",
+            "properties": {
+              "L": {
+                "type": "object",
+                "properties": {
+                  "Dusanovac VP  REMIKS": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 34
+                  },
+                  "Logistar - Platforma": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 26
+                  },
+                  "Remiks 01-Beograd TC Rajićeva": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 55
+                  }
+                }
+              },
+              "M": {
+                "type": "object",
+                "properties": {
+                  "Dusanovac VP  REMIKS": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 56
+                  },
+                  "Logistar - Platforma": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 77
+                  },
+                  "Remiks 01-Beograd TC Rajićeva": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 66
+                  }
+                }
+              }
+            }
+          },
+          "SPECIAL_PRICE": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1156.66
+          },
+          "SPECIAL_PRICE_START_DATE": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|1 June 2022"
+          },
+          "SPECIAL_PRICE_END_DATE": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|1 June 2022"
+          },
+          "NET_PURCHASE_PRICE": {
+            "type": "number",
+            "example": 556.99
+          },
+          "SECOND_NET_PURCHASE_PRICE": {
+            "type": "number",
+            "example": 132.22
+          },
+          "SECOND_NET_PURCHASE_PRICE_FROM": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|1 June 2022"
+          },
+          "SECOND_NET_PURCHASE_PRICE_TO": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|1 June 2022"
+          },
+          "SECOND_RETAIL_PRICE": {
+            "type": "number",
+            "example": 1523.77
+          },
+          "SECOND_RETAIL_PRICE_FROM": {
+            "type": "string",
+            "example": "1.6.2022|1/6/2022|06.01.2022|01-06-2022|1 June 2022"
+          },
+          "SECOND_RETAIL_PRICE_TO": {
+            "type": "string",
+            "example": "7.6.2022|7/6/2022|06.07.2022|07-06-2022|1 June 2022"
+          },
+          "RECOMMENDED_RETAIL_PRICE": {
+            "type": "number",
+            "example": 1563.99
+          },
+          "PURCHASE_PRICE": {
+            "type": "number",
+            "example": 556.99
+          }
+        }
+      },
+      "Categories": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Category"
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1970
+          },
+          "pimcore_id": {
+            "type": "string",
+            "example": "15049"
+          },
+          "name": {
+            "type": "string",
+            "example": "Gaming tastature"
+          },
+          "full_path": {
+            "type": "string",
+            "example": "It oprema -> Gaming oprema -> Gaming tastature"
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "velicina_tastature": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "format": "int32",
+                    "example": 476
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "velicina_tastature"
+                  },
+                  "label": {
+                    "type": "string",
+                    "example": "Veličina tastature"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "format": "int32",
+                          "example": 9917
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "Full Size"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductInfoResponse": {
+        "$ref": "#/components/schemas/Product"
+      },
+      "UpdateProductsResponse": {
+        "$ref": "#/components/schemas/UpdateProductsResponseObject"
+      },
+      "CategoriesResponse": {
+        "$ref": "#/components/schemas/Categories"
+      },
+      "NotAuthorized": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Not authorized!"
+          }
+        }
+      },
+      "NotExist": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "str(error)"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "There was a problem connecting to database"
+          }
+        }
+      },
+      "IntegrationPostProcessCreated": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Uspešno ste kreirali novi integration post process"
+          }
+        }
+      },
+      "NotAuthorizedResponse": {
+        "$ref": "#/components/schemas/NotAuthorized"
+      },
+      "DoesNotExistResponse": {
+        "description": "Item does not exist",
+        "properties": {
+          "application/json": {
+            "$ref": "#/components/schemas/NotExist"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Database connection error",
+        "properties": {
+          "application/json": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "IntegrationPostProcessResponse": {
+        "$ref": "#/components/schemas/IntegrationPostProcessCreated"
+      }
+    }
+  }
+}
